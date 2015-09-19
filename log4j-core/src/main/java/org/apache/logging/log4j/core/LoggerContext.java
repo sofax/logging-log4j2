@@ -163,6 +163,7 @@ public class LoggerContext extends AbstractLifeCycle implements org.apache.loggi
         this.name = name;
         this.externalContext = externalContext;
         this.configLocation = configLocn;
+        this.config.setLoggerContext(this);
     }
 
     /**
@@ -176,6 +177,7 @@ public class LoggerContext extends AbstractLifeCycle implements org.apache.loggi
     public LoggerContext(final String name, final Object externalContext, final String configLocn) {
         this.name = name;
         this.externalContext = externalContext;
+        this.config.setLoggerContext(this);
         if (configLocn != null) {
             URI uri;
             try {
@@ -281,6 +283,7 @@ public class LoggerContext extends AbstractLifeCycle implements org.apache.loggi
             }
             final Configuration prev = config;
             config = NULL_CONFIGURATION;
+            config.setLoggerContext(this);
             updateLoggers();
             prev.stop();
             externalContext = null;
@@ -410,6 +413,7 @@ public class LoggerContext extends AbstractLifeCycle implements org.apache.loggi
         try {
             final Configuration prev = this.config;
             config.addListener(this);
+            config.setLoggerContext(this);
             final ConcurrentMap<String, String> map = config.getComponent(Configuration.CONTEXT_PROPERTIES);
 
             try { // LOG4J2-719 network access may throw android.os.NetworkOnMainThreadException

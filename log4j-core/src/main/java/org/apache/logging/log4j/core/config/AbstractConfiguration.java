@@ -35,10 +35,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.core.Appender;
-import org.apache.logging.log4j.core.Filter;
-import org.apache.logging.log4j.core.Layout;
-import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.*;
 import org.apache.logging.log4j.core.appender.AsyncAppender;
 import org.apache.logging.log4j.core.appender.ConsoleAppender;
 import org.apache.logging.log4j.core.async.AsyncLoggerConfig;
@@ -108,6 +105,7 @@ public abstract class AbstractConfiguration extends AbstractFilterable implement
     protected final List<String> pluginPackages = new ArrayList<>();
     protected PluginManager pluginManager;
     private final ConfigurationSource configurationSource;
+    private LoggerContext loggerContext = null;
 
     /**
      * Constructor.
@@ -133,6 +131,16 @@ public abstract class AbstractConfiguration extends AbstractFilterable implement
     @Override
     public Map<String, String> getProperties() {
         return properties;
+    }
+
+    @Override
+    public LoggerContext getLoggerContext() {
+        return loggerContext;
+    }
+
+    @Override
+    public void setLoggerContext(LoggerContext loggerContext) {
+        this.loggerContext = loggerContext;
     }
 
     /**
@@ -214,6 +222,8 @@ public abstract class AbstractConfiguration extends AbstractFilterable implement
         // similarly, first stop AsyncLoggerConfig Disruptor thread(s)
         final Set<LoggerConfig> alreadyStopped = new HashSet<>();
         int asyncLoggerConfigCount = 0;
+        Configuration newConfiguration = loggerContext.getConfiguration();
+
         for (final LoggerConfig logger : loggers.values()) {
             if (logger instanceof AsyncLoggerConfig) {
                 // LOG4J2-520, LOG4J2-392:
@@ -221,12 +231,14 @@ public abstract class AbstractConfiguration extends AbstractFilterable implement
                 // have been stopped! Stopping the last AsyncLoggerConfig will
                 // shut down the disruptor and wait for all enqueued events to be processed.
                 // Only *after this* the appenders can be cleared or events will be lost.
+                logger.setNewConfig(newConfiguration.getLoggerConfig(logger.getName()));
                 logger.stop();
                 asyncLoggerConfigCount++;
                 alreadyStopped.add(logger);
             }
         }
         if (root instanceof AsyncLoggerConfig & !alreadyStopped.contains(root)) { // LOG4J2-807
+            root.setNewConfig(newConfiguration.getRootLogger());
             root.stop();
             asyncLoggerConfigCount++;
             alreadyStopped.add(root);
@@ -257,17 +269,17 @@ public abstract class AbstractConfiguration extends AbstractFilterable implement
 
         int loggerCount = 0;
         for (final LoggerConfig logger : loggers.values()) {
-            // clear appenders, even if this logger is already stopped.
-            logger.clearAppenders();
-
             // AsyncLoggerConfigHelper decreases its ref count when an AsyncLoggerConfig is stopped.
             // Stopping the same AsyncLoggerConfig twice results in an incorrect ref count and
             // the shared Disruptor may be shut down prematurely, resulting in NPE or other errors.
             if (alreadyStopped.contains(logger)) {
                 continue;
             }
+            logger.setNewConfig(newConfiguration.getLoggerConfig(logger.getName()));
             logger.stop();
             loggerCount++;
+            // clear appenders, even if this logger is already stopped.
+            logger.clearAppenders();
         }
         LOGGER.trace("AbstractConfiguration stopped {} Loggers.", loggerCount);
 
@@ -275,6 +287,7 @@ public abstract class AbstractConfiguration extends AbstractFilterable implement
         // Stopping the same AsyncLoggerConfig twice results in an incorrect ref count and
         // the shared Disruptor may be shut down prematurely, resulting in NPE or other errors.
         if (!alreadyStopped.contains(root)) {
+            root.setNewConfig(newConfiguration.getRootLogger());
             root.stop();
         }
         super.stop();

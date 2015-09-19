@@ -17,10 +17,7 @@
 package org.apache.logging.log4j.core.config;
 
 import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.core.Appender;
-import org.apache.logging.log4j.core.Filter;
-import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.Logger;
+import org.apache.logging.log4j.core.*;
 import org.apache.logging.log4j.core.filter.Filterable;
 import org.apache.logging.log4j.core.lookup.StrSubstitutor;
 import org.apache.logging.log4j.core.net.Advertiser;
@@ -42,6 +39,18 @@ public interface Configuration extends Filterable {
      * @return the name of the configuration.
      */
     String getName();
+
+    /**
+     * Returns the LoggerContext this configuration is associated with.
+     * @return The LoggerContext.
+     */
+    LoggerContext getLoggerContext();
+
+    /**
+     * Sets the LoggerContext for the Configuration.
+     * @param loggerContext The LoggerContext this configuration is owned by.
+     */
+    void setLoggerContext(LoggerContext loggerContext);
 
     /**
      * Locates the appropriate LoggerConfig for a Logger name. This will remove tokens from the package name as

@@ -81,6 +81,7 @@ public class LoggerConfig extends AbstractFilterable {
     private final Configuration config;
     private final Lock shutdownLock = new ReentrantLock();
     private final Condition noLogEvents = shutdownLock.newCondition(); // should only be used when shutdown == true
+    private LoggerConfig newConfig = null;
 
     static {
         final String factory = PropertiesUtil.getProperties().getStringProperty(Constants.LOG4J_LOG_EVENT_FACTORY);
@@ -152,6 +153,12 @@ public class LoggerConfig extends AbstractFilterable {
     }
 
     @Override
+    public void stop() {
+        waitForCompletion();
+        super.stop();
+    }
+
+    @Override
     public Filter getFilter() {
         return super.getFilter();
     }
@@ -181,6 +188,10 @@ public class LoggerConfig extends AbstractFilterable {
      */
     public LoggerConfig getParent() {
         return this.parent;
+    }
+
+    void setNewConfig(LoggerConfig loggerConfig) {
+        this.newConfig = loggerConfig;
     }
 
     /**
@@ -228,7 +239,6 @@ public class LoggerConfig extends AbstractFilterable {
      * Removes all Appenders.
      */
     protected void clearAppenders() {
-        waitForCompletion();
         List<AppenderControl> copy = new ArrayList<AppenderControl>(appenders);
         while (!copy.isEmpty()) {
             appenders.removeAll(copy);
@@ -381,7 +391,7 @@ public class LoggerConfig extends AbstractFilterable {
         try {
             if (shutdown.compareAndSet(false, true)) {
                 int retries = 0;
-                while (counter.get() > 0) {
+                while (counter.compareAndSet(0, Integer.MIN_VALUE)) {
                     try {
                         noLogEvents.await(retries + 1, TimeUnit.SECONDS);
                     } catch (final InterruptedException ie) {
@@ -402,18 +412,23 @@ public class LoggerConfig extends AbstractFilterable {
      * @param event The log event.
      */
     public void log(final LogEvent event) {
-        beforeLogEvent();
-        try {
-            if (!isFiltered(event)) {
-                processLogEvent(event);
+        if (beforeLogEvent()) {
+            try {
+                if (!isFiltered(event)) {
+                    processLogEvent(event);
+                }
+            } finally {
+                afterLogEvent();
             }
-        } finally {
-            afterLogEvent();
+        } else {
+            if (newConfig != null) {
+                newConfig.log(event);
+            }
         }
     }
 
-    private void beforeLogEvent() {
-        counter.incrementAndGet();
+    private boolean beforeLogEvent() {
+        return counter.incrementAndGet() > 0;
     }
 
     private void afterLogEvent() {
