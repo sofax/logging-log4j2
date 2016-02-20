@@ -17,6 +17,7 @@
 package org.apache.logging.log4j.spi;
 
 import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LevelLogger;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
 import org.apache.logging.log4j.message.DefaultFlowMessageFactory;
@@ -34,6 +35,8 @@ import org.apache.logging.log4j.util.Strings;
 import org.apache.logging.log4j.util.Supplier;
 
 import java.io.Serializable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Base implementation of a Logger. It is highly recommended that any Logger implementation extend this class.
@@ -91,6 +94,7 @@ public abstract class AbstractLogger implements ExtendedLogger, Serializable {
     private final String name;
     private final MessageFactory messageFactory;
     private final FlowMessageFactory flowMessageFactory;
+    private final ConcurrentMap<Level, LevelLogger> levelLoggerMap = new ConcurrentHashMap<>();
 
     /**
      * Creates a new logger named after this class (or subclass).
@@ -146,6 +150,68 @@ public abstract class AbstractLogger implements ExtendedLogger, Serializable {
                             + "formatting.",
                             name, loggerMessageFactory, DEFAULT_MESSAGE_FACTORY_CLASS.getName());
         }
+    }
+
+    /**
+     * Returns the {@code LevelLogger} for {@link Level#TRACE}.
+     * @return the trace LevelLogger
+     */
+    public LevelLogger trace() {
+        return level(Level.TRACE);
+    }
+
+    /**
+     * Returns the {@code LevelLogger} for {@link Level#DEBUG}.
+     * @return the debug LevelLogger
+     */
+    public LevelLogger debug() {
+        return level(Level.DEBUG);
+    }
+
+    /**
+     * Returns the {@code LevelLogger} for {@link Level#INFO}.
+     * @return the info LevelLogger
+     */
+    public LevelLogger info() {
+        return level(Level.INFO);
+    }
+
+    /**
+     * Returns the {@code LevelLogger} for {@link Level#WARN}.
+     * @return the info LevelLogger
+     */
+    public LevelLogger warn() {
+        return level(Level.WARN);
+    }
+
+    /**
+     * Returns the {@code LevelLogger} for {@link Level#ERROR}.
+     * @return the error LevelLogger
+     */
+    public LevelLogger error() {
+        return level(Level.ERROR);
+    }
+
+    /**
+     * Returns the {@code LevelLogger} for {@link Level#FATAL}.
+     * @return the fatal LevelLogger
+     */
+    public LevelLogger fatal() {
+        return level(Level.FATAL);
+    }
+
+    /**
+     * Returns the {@code LevelLogger} for the specified Level (which may be a custom level)..
+     * @return the LevelLogger for the specified level
+     */
+    public LevelLogger level(Level level) {
+        final LevelLogger result = levelLoggerMap.get(level);
+        if (result != null) {
+            return result;
+        }
+        final LevelLogger add = new LevelLoggerImpl(level, this);
+        LevelLogger replaced = levelLoggerMap.putIfAbsent(level, add);
+        return replaced == null ? add : replaced;
     }
 
     @Override

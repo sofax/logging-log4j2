@@ -70,6 +70,48 @@ import org.apache.logging.log4j.util.Supplier;
 public interface Logger {
 
     /**
+     * Returns the {@code LevelLogger} for {@link Level#TRACE}.
+     * @return the trace LevelLogger
+     */
+    LevelLogger trace();
+
+    /**
+     * Returns the {@code LevelLogger} for {@link Level#DEBUG}.
+     * @return the debug LevelLogger
+     */
+    LevelLogger debug();
+
+    /**
+     * Returns the {@code LevelLogger} for {@link Level#INFO}.
+     * @return the info LevelLogger
+     */
+    LevelLogger info();
+
+    /**
+     * Returns the {@code LevelLogger} for {@link Level#WARN}.
+     * @return the info LevelLogger
+     */
+    LevelLogger warn();
+
+    /**
+     * Returns the {@code LevelLogger} for {@link Level#ERROR}.
+     * @return the error LevelLogger
+     */
+    LevelLogger error();
+
+    /**
+     * Returns the {@code LevelLogger} for {@link Level#FATAL}.
+     * @return the fatal LevelLogger
+     */
+    LevelLogger fatal();
+
+    /**
+     * Returns the {@code LevelLogger} for the specified Level (which may be a custom level)..
+     * @return the LevelLogger for the specified level
+     */
+    LevelLogger level(Level level);
+
+    /**
      * Logs an exception or error that has been caught to a specific logging level.
      *
      * @param level The logging Level.
@@ -330,7 +372,7 @@ public interface Logger {
     void entry();
 
     /**
-     * Logs entry to a method along with its parameters (consider using one of the {@code traceEntry(...)} methods instead.) 
+     * Logs entry to a method along with its parameters (consider using one of the {@code traceEntry(...)} methods instead.)
      * <p>
      * For example:
      * </p>
@@ -1753,7 +1795,7 @@ public interface Logger {
     /**
      * Logs entry to a method. Used when the method in question has no parameters or when the parameters should not be
      * logged.
-     * 
+     *
      * @return built message
      * @since 2.6
      */
@@ -1780,7 +1822,7 @@ public interface Logger {
      * @param format The format String for the parameters.
      * @param params The parameters to the method.
      * @return The built Message
-     * 
+     *
      * @since 2.6
      */
     EntryMessage traceEntry(String format, Object... params);
@@ -1797,7 +1839,7 @@ public interface Logger {
      *
      * @param paramSuppliers The Suppliers for the parameters to the method.
      * @return built message
-     * 
+     *
      * @since 2.6
      */
     EntryMessage traceEntry(Supplier<?>... paramSuppliers);
@@ -1815,7 +1857,7 @@ public interface Logger {
      * @param format The format String for the parameters.
      * @param paramSuppliers The Suppliers for the parameters to the method.
      * @return built message
-     * 
+     *
      * @since 2.6
      */
     EntryMessage traceEntry(String format, Supplier<?>... paramSuppliers);
@@ -1831,14 +1873,14 @@ public interface Logger {
      *
      * @param message The message.
      * @return the built message
-     * 
+     *
      * @since 2.6
      */
     EntryMessage traceEntry(Message message);
 
     /**
      * Logs exit from a method. Used for methods that do not return anything.
-     * 
+     *
      * @since 2.6
      */
     void traceExit();
@@ -1853,7 +1895,7 @@ public interface Logger {
      * @param <R> The type of the parameter and object being returned.
      * @param result The result being returned from the method call.
      * @return the result.
-     * 
+     *
      * @since 2.6
      */
     <R> R traceExit(R result);
@@ -1869,7 +1911,7 @@ public interface Logger {
      * @param format The format String for the result.
      * @param result The result being returned from the method call.
      * @return the result.
-     * 
+     *
      * @since 2.6
      */
     <R> R traceExit(String format, R result);
@@ -1906,7 +1948,7 @@ public interface Logger {
      *
      * @param <R> The type of the parameter and object being returned.
      * @return the result.
-     * 
+     *
      * @since 2.6
      */
     <R> R traceExit(EntryMessage message, R result);
@@ -1922,7 +1964,7 @@ public interface Logger {
      *
      * @param <R> The type of the parameter and object being returned.
      * @return the result.
-     * 
+     *
      * @since 2.6
      */
     <R> R traceExit(Message message, R result);
