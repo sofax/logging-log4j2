@@ -107,6 +107,7 @@ public interface Logger {
 
     /**
      * Returns the {@code LevelLogger} for the specified Level (which may be a custom level)..
+     * @param level The requested level, stock or custom.
      * @return the LevelLogger for the specified level
      */
     LevelLogger level(Level level);
