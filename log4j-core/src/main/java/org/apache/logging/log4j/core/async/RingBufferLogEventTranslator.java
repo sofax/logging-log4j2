@@ -48,12 +48,16 @@ public class RingBufferLogEventTranslator implements
     private long currentTimeMillis;
     private long nanoTime;
 
+    public RingBufferLogEventTranslator(final String name) {
+        threadName = name;
+    }
+
     // @Override
     @Override
     public void translateTo(final RingBufferLogEvent event, final long sequence) {
         event.setValues(asyncLogger, loggerName, marker, fqcn, level, message,
                 thrown, contextMap, contextStack, threadName, location,
-                currentTimeMillis, nanoTime);
+                currentTimeMillis); //, nanoTime);
         clear();
     }
 
@@ -71,17 +75,17 @@ public class RingBufferLogEventTranslator implements
                 null, // t
                 null, // map
                 null, // contextStack
-                null, // threadName
+//                null, // threadName
                 null, // location
-                0, // currentTimeMillis
+//                0, // currentTimeMillis
                 0 // nanoTime
         );
     }
 
     public void setValues(final AsyncLogger anAsyncLogger, final String aLoggerName, final Marker aMarker,
             final String theFqcn, final Level aLevel, final Message msg, final Throwable aThrowable,
-            final Map<String, String> aMap, final ContextStack aContextStack, final String aThreadName,
-            final StackTraceElement aLocation, final long aCurrentTimeMillis, final long aNanoTime) {
+            final Map<String, String> aMap, final ContextStack aContextStack, //final String aThreadName,
+            final StackTraceElement aLocation, final long aCurrentTimeMillis){ //, final long aNanoTime) {
         this.asyncLogger = anAsyncLogger;
         this.loggerName = aLoggerName;
         this.marker = aMarker;
@@ -91,10 +95,10 @@ public class RingBufferLogEventTranslator implements
         this.thrown = aThrowable;
         this.contextMap = aMap;
         this.contextStack = aContextStack;
-        this.threadName = aThreadName;
+//        this.threadName = aThreadName;
         this.location = aLocation;
         this.currentTimeMillis = aCurrentTimeMillis;
-        this.nanoTime = aNanoTime;
+//        this.nanoTime = aNanoTime;
     }
 
     public void setValuesPart1(final AsyncLogger anAsyncLogger, final String aLoggerName, final Marker aMarker,

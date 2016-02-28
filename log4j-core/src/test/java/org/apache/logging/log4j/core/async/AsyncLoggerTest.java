@@ -52,10 +52,10 @@ public class AsyncLoggerTest {
         final File file = new File("target", "AsyncLoggerTest.log");
         // System.out.println(f.getAbsolutePath());
         file.delete();
-        
+
         final AsyncLogger log = (AsyncLogger) LogManager.getLogger("com.foo.Bar");
-        assertTrue(log.getNanoClock() instanceof DummyNanoClock);
-        
+//        assertTrue(log.getNanoClock() instanceof DummyNanoClock);
+
         final String msg = "Async logger msg";
         log.info(msg, new InternalError("this is not a real error"));
         CoreLoggerContexts.stopLoggerContext(false, file); // stop async thread

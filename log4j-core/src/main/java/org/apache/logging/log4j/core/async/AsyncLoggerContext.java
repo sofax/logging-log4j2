@@ -57,9 +57,9 @@ public class AsyncLoggerContext extends LoggerContext {
 
     @Override
     protected Logger newInstance(final LoggerContext ctx, final String name, final MessageFactory messageFactory) {
-        return new AsyncLogger(ctx, name, messageFactory, loggerDisruptor);
+        return new AsyncLogger(ctx, name, messageFactory); //, loggerDisruptor);
     }
-    
+
     @Override
     public void setName(final String name) {
         super.setName("AsyncContext[" + name + "]");
@@ -68,7 +68,7 @@ public class AsyncLoggerContext extends LoggerContext {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see org.apache.logging.log4j.core.LoggerContext#start()
      */
     @Override
@@ -79,7 +79,7 @@ public class AsyncLoggerContext extends LoggerContext {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see org.apache.logging.log4j.core.LoggerContext#start(org.apache.logging.log4j.core.config.Configuration)
      */
     @Override

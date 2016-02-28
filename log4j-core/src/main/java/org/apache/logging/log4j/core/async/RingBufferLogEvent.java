@@ -129,7 +129,7 @@ public class RingBufferLogEvent implements LogEvent {
     public void setValues(final AsyncLogger anAsyncLogger, final String aLoggerName, final Marker aMarker,
             final String theFqcn, final Level aLevel, final Message msg, final Throwable aThrowable,
             final Map<String, String> aMap, final ContextStack aContextStack, final String aThreadName,
-            final StackTraceElement aLocation, final long aCurrentTimeMillis, final long aNanoTime) {
+            final StackTraceElement aLocation, final long aCurrentTimeMillis) {//}, final long aNanoTime) {
         this.asyncLogger = anAsyncLogger;
         this.loggerName = aLoggerName;
         this.marker = aMarker;
@@ -153,7 +153,7 @@ public class RingBufferLogEvent implements LogEvent {
         this.threadName = aThreadName;
         this.location = aLocation;
         this.currentTimeMillis = aCurrentTimeMillis;
-        this.nanoTime = aNanoTime;
+//        this.nanoTime = aNanoTime;
     }
 
     /**
@@ -321,7 +321,7 @@ public class RingBufferLogEvent implements LogEvent {
                 null, // contextStack
                 null, // threadName
                 null, // location
-                0, // currentTimeMillis
+//                0, // currentTimeMillis
                 0 // nanoTime
         );
     }

@@ -60,7 +60,7 @@ public class RingBufferLogEventTest {
         final long currentTimeMillis = 0;
         final long nanoTime = 1;
         evt.setValues(null, loggerName, marker, fqcn, level, data, t, map,
-                contextStack, threadName, location, currentTimeMillis, nanoTime);
+                contextStack, threadName, location, currentTimeMillis); // FIXME, nanoTime);
         assertEquals(Level.OFF, evt.getLevel());
     }
 
@@ -80,7 +80,7 @@ public class RingBufferLogEventTest {
         final long currentTimeMillis = 0;
         final long nanoTime = 1;
         evt.setValues(null, loggerName, marker, fqcn, level, data, t, map,
-                contextStack, threadName, location, currentTimeMillis, nanoTime);
+                contextStack, threadName, location, currentTimeMillis); // FIXME, nanoTime);
         assertNotNull(evt.getMessage());
     }
 
@@ -100,7 +100,7 @@ public class RingBufferLogEventTest {
         final long currentTimeMillis = 123;
         final long nanoTime = 1;
         evt.setValues(null, loggerName, marker, fqcn, level, data, t, map,
-                contextStack, threadName, location, currentTimeMillis, nanoTime);
+                contextStack, threadName, location, currentTimeMillis); // FIXME, nanoTime);
         assertEquals(123, evt.getTimeMillis());
     }
 
@@ -120,12 +120,12 @@ public class RingBufferLogEventTest {
         final long currentTimeMillis = 12345;
         final long nanoTime = 1;
         evt.setValues(null, loggerName, marker, fqcn, level, data, t, map,
-                contextStack, threadName, location, currentTimeMillis, nanoTime);
-        
+                contextStack, threadName, location, currentTimeMillis); // FIXME, nanoTime);
+
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         final ObjectOutputStream out = new ObjectOutputStream(baos);
         out.writeObject(evt);
-        
+
         final ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray()));
         final RingBufferLogEvent other = (RingBufferLogEvent) in.readObject();
         assertEquals(loggerName, other.getLoggerName());
@@ -141,7 +141,7 @@ public class RingBufferLogEventTest {
         assertEquals(location, other.getSource());
         assertEquals(currentTimeMillis, other.getTimeMillis());
     }
-    
+
     @Test
     public void testCreateMementoReturnsCopy() {
         final RingBufferLogEvent evt = new RingBufferLogEvent();
@@ -159,8 +159,8 @@ public class RingBufferLogEventTest {
         final long currentTimeMillis = 12345;
         final long nanoTime = 1;
         evt.setValues(null, loggerName, marker, fqcn, level, data, t, map,
-                contextStack, threadName, location, currentTimeMillis, nanoTime);
-        
+                contextStack, threadName, location, currentTimeMillis); // FIXME, nanoTime);
+
         final LogEvent actual = evt.createMemento();
         assertEquals(evt.getLoggerName(), actual.getLoggerName());
         assertEquals(evt.getMarker(), actual.getMarker());
