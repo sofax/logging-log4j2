@@ -32,7 +32,10 @@ import org.apache.logging.log4j.core.appender.FileManager;
 import org.apache.logging.log4j.core.appender.ManagerFactory;
 import org.apache.logging.log4j.core.appender.rolling.action.AbstractAction;
 import org.apache.logging.log4j.core.appender.rolling.action.Action;
+import org.apache.logging.log4j.core.layout.ByteBufferDestination;
+import org.apache.logging.log4j.core.util.Constants;
 import org.apache.logging.log4j.core.util.Log4jThread;
+import org.apache.logging.log4j.core.util.OutputStreamByteBufferDestinationAdapter;
 
 /**
  * The Rolling File Manager.
@@ -57,8 +60,9 @@ public class RollingFileManager extends FileManager {
     protected RollingFileManager(final String fileName, final String pattern, final OutputStream os,
             final boolean append, final long size, final long time, final TriggeringPolicy triggeringPolicy,
             final RolloverStrategy rolloverStrategy, final String advertiseURI,
-            final Layout<? extends Serializable> layout, final int bufferSize, final boolean writeHeader) {
-        super(fileName, os, append, false, advertiseURI, layout, bufferSize, writeHeader);
+            final Layout<? extends Serializable> layout, final int bufferSize, final boolean writeHeader,
+            final ByteBufferDestination destination) {
+        super(fileName, os, append, false, advertiseURI, layout, bufferSize, writeHeader, destination);
         this.size = size;
         this.initialTime = time;
         this.triggeringPolicy = triggeringPolicy;
@@ -134,9 +138,16 @@ public class RollingFileManager extends FileManager {
 
     protected void createFileAfterRollover() throws IOException  {
         final OutputStream os = new FileOutputStream(getFileName(), isAppend());
-        if (getBufferSize() > 0) { // negative buffer size means no buffering
-            setOutputStream(new BufferedOutputStream(os, getBufferSize()));
+
+        if (getBufferSize() > 0) {
+            if (Constants.ENABLE_THREADLOCALS) {
+                byteBufferDestination.setOutputStream(os);
+                setOutputStream(os);
+            } else {
+                setOutputStream(new BufferedOutputStream(os, getBufferSize()));
+            }
         } else {
+            // Negative buffer size means no buffering.
             setOutputStream(os);
         }
     }
@@ -398,18 +409,26 @@ public class RollingFileManager extends FileManager {
             }
             final long size = data.append ? file.length() : 0;
 
+            ByteBufferDestination destination = null;
             OutputStream os;
             try {
                 os = new FileOutputStream(name, data.append);
                 int bufferSize = data.bufferSize;
+
+                // if Constants.ENABLE_THREADLOCALS is true,
+                // we use ByteBufferDestination to buffer the data
                 if (data.bufferedIO) {
-                    os = new BufferedOutputStream(os, bufferSize);
+                    if (Constants.ENABLE_THREADLOCALS) {
+                        destination = new OutputStreamByteBufferDestinationAdapter(os, bufferSize);
+                    } else {
+                        os = new BufferedOutputStream(os, bufferSize);
+                    }
                 } else {
                     bufferSize = -1; // negative buffer size signals bufferedIO was configured false
                 }
                 final long time = file.lastModified(); // LOG4J2-531 create file first so time has valid value
                 return new RollingFileManager(name, data.pattern, os, data.append, size, time, data.policy,
-                    data.strategy, data.advertiseURI, data.layout, bufferSize, writeHeader);
+                    data.strategy, data.advertiseURI, data.layout, bufferSize, writeHeader, destination);
             } catch (final FileNotFoundException ex) {
                 LOGGER.error("FileManager (" + name + ") " + ex, ex);
             }

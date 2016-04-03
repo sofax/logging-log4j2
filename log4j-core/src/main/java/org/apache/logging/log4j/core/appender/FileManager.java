@@ -29,6 +29,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.logging.log4j.core.Layout;
+import org.apache.logging.log4j.core.layout.ByteBufferDestination;
+import org.apache.logging.log4j.core.util.Constants;
+import org.apache.logging.log4j.core.util.OutputStreamByteBufferDestinationAdapter;
 
 
 /**
@@ -45,8 +48,8 @@ public class FileManager extends OutputStreamManager {
 
     protected FileManager(final String fileName, final OutputStream os, final boolean append, final boolean locking,
             final String advertiseURI, final Layout<? extends Serializable> layout, final int bufferSize,
-            final boolean writeHeader) {
-        super(os, fileName, layout, writeHeader);
+            final boolean writeHeader, final ByteBufferDestination destination) {
+        super(os, fileName, layout, writeHeader, destination);
         this.isAppend = append;
         this.isLocking = locking;
         this.advertiseURI = advertiseURI;
@@ -126,7 +129,7 @@ public class FileManager extends OutputStreamManager {
     public boolean isLocking() {
         return isLocking;
     }
-    
+
     /**
      * Returns the buffer size to use if the appender was configured with BufferedIO=true, otherwise returns a negative
      * number.
@@ -202,13 +205,21 @@ public class FileManager extends OutputStreamManager {
             try {
                 os = new FileOutputStream(name, data.append);
                 int bufferSize = data.bufferSize;
+
+                ByteBufferDestination destination = null;
+
+                // if Constants.ENABLE_THREADLOCALS is true, we use ByteBufferDestination to buffer the data
                 if (data.bufferedIO) {
-                    os = new BufferedOutputStream(os, bufferSize);
+                    if (Constants.ENABLE_THREADLOCALS) {
+                        destination = new OutputStreamByteBufferDestinationAdapter(os, bufferSize);
+                    } else {
+                        os = new BufferedOutputStream(os, bufferSize);
+                    }
                 } else {
                     bufferSize = -1; // signals to RollingFileManager not to use BufferedOutputStream
                 }
                 return new FileManager(name, os, data.append, data.locking, data.advertiseURI, data.layout, bufferSize,
-                        writeHeader);
+                        writeHeader, destination);
             } catch (final FileNotFoundException ex) {
                 LOGGER.error("FileManager (" + name + ") " + ex, ex);
             }
