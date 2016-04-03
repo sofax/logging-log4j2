@@ -18,8 +18,11 @@ package org.apache.logging.log4j.core.appender;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Objects;
 
 import org.apache.logging.log4j.core.Layout;
+import org.apache.logging.log4j.core.layout.ByteBufferDestination;
+import org.apache.logging.log4j.core.util.OutputStreamByteBufferDestinationAdapter;
 
 /**
  * Manages an OutputStream so that it can be shared by multiple Appenders and will
@@ -29,9 +32,15 @@ public class OutputStreamManager extends AbstractManager {
 
     private volatile OutputStream os;
     protected final Layout<?> layout;
+    protected final ByteBufferDestination byteBufferDestination;
 
     protected OutputStreamManager(final OutputStream os, final String streamName, final Layout<?> layout,
             final boolean writeHeader) {
+        this(os, streamName, layout, writeHeader, new OutputStreamByteBufferDestinationAdapter(os));
+    }
+
+    protected OutputStreamManager(final OutputStream os, final String streamName, final Layout<?> layout,
+            final boolean writeHeader, final ByteBufferDestination byteBufferDestination) {
         super(streamName);
         this.os = os;
         this.layout = layout;
@@ -45,6 +54,7 @@ public class OutputStreamManager extends AbstractManager {
                 }
             }
         }
+        this.byteBufferDestination = Objects.requireNonNull(byteBufferDestination, "byteBufferDestination");
     }
 
     /**
@@ -61,6 +71,10 @@ public class OutputStreamManager extends AbstractManager {
         return AbstractManager.getManager(name, factory, data);
     }
 
+    public ByteBufferDestination getByteBufferDestination() {
+        return byteBufferDestination;
+    }
+
     /**
      * Default hook to write footer during close.
      */
@@ -74,6 +88,10 @@ public class OutputStreamManager extends AbstractManager {
      * Writes the footer.
      */
     protected void writeFooter() {
+        // ensure all buffered data is written to the stream before writing footer
+        final ByteBufferDestination destination = getByteBufferDestination();
+        destination.drain(destination.getByteBuffer());
+
         if (layout == null) {
             return;
         }

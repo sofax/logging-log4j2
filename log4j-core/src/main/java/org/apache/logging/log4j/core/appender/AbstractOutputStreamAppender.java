@@ -20,10 +20,12 @@ import java.io.Serializable;
 import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.layout.ByteBufferDestination;
+import org.apache.logging.log4j.core.util.Constants;
 
 /**
  * Appends log events as bytes to a byte output stream. The stream encoding is defined in the layout.
- * 
+ *
  * @param <M> The kind of {@link OutputStreamManager} under management
  */
 public abstract class AbstractOutputStreamAppender<M extends OutputStreamManager> extends AbstractAppender {
@@ -41,7 +43,7 @@ public abstract class AbstractOutputStreamAppender<M extends OutputStreamManager
     /**
      * Instantiates a WriterAppender and set the output destination to a new {@link java.io.OutputStreamWriter}
      * initialized with <code>os</code> as its {@link java.io.OutputStream}.
-     * 
+     *
      * @param name The name of the Appender.
      * @param layout The layout to format the message.
      * @param manager The OutputStreamManager.
@@ -55,7 +57,7 @@ public abstract class AbstractOutputStreamAppender<M extends OutputStreamManager
 
     /**
      * Gets the immediate flush setting.
-     * 
+     *
      * @return immediate flush.
      */
     public boolean getImmediateFlush() {
@@ -64,7 +66,7 @@ public abstract class AbstractOutputStreamAppender<M extends OutputStreamManager
 
     /**
      * Gets the manager.
-     * 
+     *
      * @return the manager.
      */
     public M getManager() {
@@ -93,12 +95,21 @@ public abstract class AbstractOutputStreamAppender<M extends OutputStreamManager
      * <p>
      * Most subclasses of <code>AbstractOutputStreamAppender</code> will need to override this method.
      * </p>
-     * 
+     *
      * @param event The LogEvent.
      */
     @Override
     public void append(final LogEvent event) {
         try {
+            if (Constants.ENABLE_THREADLOCALS) {
+                final ByteBufferDestination destination = manager.getByteBufferDestination();
+                getLayout().encode(event, destination);
+                if (this.immediateFlush || event.isEndOfBatch()) {
+                    destination.drain(destination.getByteBuffer()); // write buffer to outputStream
+                    manager.flush();
+                }
+                return;
+            }
             final byte[] bytes = getLayout().toByteArray(event);
             if (bytes != null && bytes.length > 0) {
                 manager.write(bytes, this.immediateFlush || event.isEndOfBatch());
