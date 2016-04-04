@@ -29,6 +29,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.logging.log4j.core.Layout;
+import org.apache.logging.log4j.core.util.ByteBufferDestinationOutputStream;
+import org.apache.logging.log4j.core.util.Constants;
 
 
 /**
@@ -126,7 +128,7 @@ public class FileManager extends OutputStreamManager {
     public boolean isLocking() {
         return isLocking;
     }
-    
+
     /**
      * Returns the buffer size to use if the appender was configured with BufferedIO=true, otherwise returns a negative
      * number.
@@ -203,7 +205,12 @@ public class FileManager extends OutputStreamManager {
                 os = new FileOutputStream(name, data.append);
                 int bufferSize = data.bufferSize;
                 if (data.bufferedIO) {
-                    os = new BufferedOutputStream(os, bufferSize);
+
+                    // LOG4J2-1344 this Manager controls the buffer size so wrap the stream here
+                    // (or OutputStreamManager constructor will wrap the stream with a default-size buffer).
+                    os = Constants.ENABLE_DIRECT_ENCODERS
+                            ? new ByteBufferDestinationOutputStream(os, bufferSize)
+                            : new BufferedOutputStream(os, bufferSize);
                 } else {
                     bufferSize = -1; // signals to RollingFileManager not to use BufferedOutputStream
                 }

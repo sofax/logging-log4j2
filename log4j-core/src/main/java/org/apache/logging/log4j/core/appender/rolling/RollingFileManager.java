@@ -32,6 +32,8 @@ import org.apache.logging.log4j.core.appender.FileManager;
 import org.apache.logging.log4j.core.appender.ManagerFactory;
 import org.apache.logging.log4j.core.appender.rolling.action.AbstractAction;
 import org.apache.logging.log4j.core.appender.rolling.action.Action;
+import org.apache.logging.log4j.core.util.ByteBufferDestinationOutputStream;
+import org.apache.logging.log4j.core.util.Constants;
 import org.apache.logging.log4j.core.util.Log4jThread;
 
 /**
@@ -135,7 +137,13 @@ public class RollingFileManager extends FileManager {
     protected void createFileAfterRollover() throws IOException  {
         final OutputStream os = new FileOutputStream(getFileName(), isAppend());
         if (getBufferSize() > 0) { // negative buffer size means no buffering
-            setOutputStream(new BufferedOutputStream(os, getBufferSize()));
+
+            // LOG4J2-1344 this Manager controls the buffer size so wrap the stream here
+            // (or OutputStreamManager constructor will wrap the stream with a default-size buffer).
+            final OutputStream actual = Constants.ENABLE_DIRECT_ENCODERS
+                    ? new ByteBufferDestinationOutputStream(os, getBufferSize())
+                    : new BufferedOutputStream(os, getBufferSize());
+            setOutputStream(actual);
         } else {
             setOutputStream(os);
         }
@@ -403,7 +411,12 @@ public class RollingFileManager extends FileManager {
                 os = new FileOutputStream(name, data.append);
                 int bufferSize = data.bufferSize;
                 if (data.bufferedIO) {
-                    os = new BufferedOutputStream(os, bufferSize);
+
+                    // LOG4J2-1344 this Manager controls the buffer size so wrap the stream here
+                    // (or OutputStreamManager constructor will wrap the stream with a default-size buffer).
+                    os = Constants.ENABLE_DIRECT_ENCODERS
+                            ? new ByteBufferDestinationOutputStream(os, bufferSize)
+                            : new BufferedOutputStream(os, bufferSize);
                 } else {
                     bufferSize = -1; // negative buffer size signals bufferedIO was configured false
                 }
