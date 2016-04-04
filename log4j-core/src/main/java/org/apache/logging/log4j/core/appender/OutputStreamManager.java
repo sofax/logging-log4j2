@@ -16,10 +16,15 @@
  */
 package org.apache.logging.log4j.core.appender;
 
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
 import org.apache.logging.log4j.core.Layout;
+import org.apache.logging.log4j.core.layout.ByteBufferDestination;
+import org.apache.logging.log4j.core.util.ByteBufferDestinationOutputStream;
+import org.apache.logging.log4j.core.util.Constants;
+import org.apache.logging.log4j.core.util.NullOutputStream;
 
 /**
  * Manages an OutputStream so that it can be shared by multiple Appenders and will
@@ -33,7 +38,7 @@ public class OutputStreamManager extends AbstractManager {
     protected OutputStreamManager(final OutputStream os, final String streamName, final Layout<?> layout,
             final boolean writeHeader) {
         super(streamName);
-        this.os = os;
+        this.os = adaptForDirectEncoding(os);
         this.layout = layout;
         if (writeHeader && layout != null) {
             final byte[] header = layout.getHeader();
@@ -45,6 +50,13 @@ public class OutputStreamManager extends AbstractManager {
                 }
             }
         }
+    }
+
+    // LOG4J2-1343 enable all OutputStreamAppenders to use new garbage-free layout mechanism.
+    // Appenders that control buffer size have already wrapped the output stream or give us a dummy stream.
+    private static OutputStream adaptForDirectEncoding(final OutputStream os) {
+        final boolean SHOULD_WRAP = !(os instanceof ByteBufferDestination) && !(os instanceof NullOutputStream);
+        return Constants.ENABLE_DIRECT_ENCODERS && SHOULD_WRAP ? new ByteBufferDestinationOutputStream(os) : os;
     }
 
     /**
@@ -59,6 +71,18 @@ public class OutputStreamManager extends AbstractManager {
     public static <T> OutputStreamManager getManager(final String name, final T data,
                                                  final ManagerFactory<? extends OutputStreamManager, T> factory) {
         return AbstractManager.getManager(name, factory, data);
+    }
+
+    /**
+     * Returns the {@code ByteBufferDestination} for the Layout to directly encode the LogEvent into.
+     * @return the {@code ByteBufferDestination} for the Layout to directly encode the LogEvent into
+     */
+    public ByteBufferDestination getByteBufferDestination() {
+        if (Constants.ENABLE_DIRECT_ENCODERS) {
+            return (ByteBufferDestination) os;
+        }
+        throw new UnsupportedOperationException(
+                "ByteBufferDestination not available unless direct encoders are enabled");
     }
 
     /**
@@ -95,7 +119,8 @@ public class OutputStreamManager extends AbstractManager {
         return os;
     }
 
-    protected void setOutputStream(final OutputStream os) {
+    protected void setOutputStream(final OutputStream original) {
+        final OutputStream os = adaptForDirectEncoding(original);
         final byte[] header = layout.getHeader();
         if (header != null) {
             try {
