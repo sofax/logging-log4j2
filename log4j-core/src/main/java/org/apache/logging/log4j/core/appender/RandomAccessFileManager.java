@@ -77,6 +77,10 @@ public class RandomAccessFileManager extends OutputStreamManager implements Byte
                 isFlush, bufferSize, advertiseURI, layout), FACTORY);
     }
 
+    public ByteBufferDestination getByteBufferDestination() {
+        return this;
+    }
+
     public Boolean isEndOfBatch() {
         return isEndOfBatch.get();
     }

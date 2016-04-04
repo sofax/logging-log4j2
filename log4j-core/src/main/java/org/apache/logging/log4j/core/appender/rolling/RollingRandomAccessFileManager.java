@@ -86,6 +86,10 @@ public class RollingRandomAccessFileManager extends RollingFileManager implement
                 immediateFlush, bufferSize, policy, strategy, advertiseURI, layout), FACTORY);
     }
 
+    public ByteBufferDestination getByteBufferDestination() {
+        return this;
+    }
+
     public Boolean isEndOfBatch() {
         return isEndOfBatch.get();
     }
