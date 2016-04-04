@@ -20,10 +20,12 @@ import java.io.Serializable;
 import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.layout.ByteBufferDestination;
+import org.apache.logging.log4j.core.util.Constants;
 
 /**
  * Appends log events as bytes to a byte output stream. The stream encoding is defined in the layout.
- * 
+ *
  * @param <M> The kind of {@link OutputStreamManager} under management
  */
 public abstract class AbstractOutputStreamAppender<M extends OutputStreamManager> extends AbstractAppender {
@@ -41,7 +43,7 @@ public abstract class AbstractOutputStreamAppender<M extends OutputStreamManager
     /**
      * Instantiates a WriterAppender and set the output destination to a new {@link java.io.OutputStreamWriter}
      * initialized with <code>os</code> as its {@link java.io.OutputStream}.
-     * 
+     *
      * @param name The name of the Appender.
      * @param layout The layout to format the message.
      * @param manager The OutputStreamManager.
@@ -55,7 +57,7 @@ public abstract class AbstractOutputStreamAppender<M extends OutputStreamManager
 
     /**
      * Gets the immediate flush setting.
-     * 
+     *
      * @return immediate flush.
      */
     public boolean getImmediateFlush() {
@@ -64,7 +66,7 @@ public abstract class AbstractOutputStreamAppender<M extends OutputStreamManager
 
     /**
      * Gets the manager.
-     * 
+     *
      * @return the manager.
      */
     public M getManager() {
@@ -93,20 +95,45 @@ public abstract class AbstractOutputStreamAppender<M extends OutputStreamManager
      * <p>
      * Most subclasses of <code>AbstractOutputStreamAppender</code> will need to override this method.
      * </p>
-     * 
+     *
      * @param event The LogEvent.
      */
     @Override
     public void append(final LogEvent event) {
         try {
+            tryAppend(event);
+        } catch (final AppenderLoggingException alex) {
+            reportAppendError(alex);
+            throw alex;
+        } catch (final Exception ex) {
+            reportAppendError(ex);
+            throw new AppenderLoggingException(ex);
+        }
+    }
+
+    private void tryAppend(final LogEvent event) {
+        if (Constants.ENABLE_DIRECT_ENCODERS) {
+            directEncodeEvent(event);
+        } else {
             final byte[] bytes = getLayout().toByteArray(event);
             if (bytes != null && bytes.length > 0) {
                 manager.write(bytes, this.immediateFlush || event.isEndOfBatch());
             }
-        } catch (final AppenderLoggingException ex) {
-            error("Unable to write to stream " + manager.getName() + " for appender " + getName());
-            throw ex;
         }
     }
 
+    private void directEncodeEvent(final LogEvent event) {
+        synchronized (manager) {
+            final ByteBufferDestination destination = manager.getByteBufferDestination();
+            getLayout().encode(event, destination);
+            if (this.immediateFlush || event.isEndOfBatch()) {
+                destination.drain(destination.getByteBuffer()); // write buffer to outputStream
+                manager.flush();
+            }
+        }
+    }
+
+    private void reportAppendError(final Exception ex) {
+        error("Unable to write to stream " + manager.getName() + " for appender " + getName() + ": " + ex);
+    }
 }
