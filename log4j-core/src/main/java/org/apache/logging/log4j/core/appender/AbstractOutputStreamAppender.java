@@ -111,25 +111,29 @@ public abstract class AbstractOutputStreamAppender<M extends OutputStreamManager
         }
     }
 
-    private void tryAppend(final LogEvent event) {
+    protected void tryAppend(final LogEvent event) {
         if (Constants.ENABLE_DIRECT_ENCODERS) {
             directEncodeEvent(event);
         } else {
-            final byte[] bytes = getLayout().toByteArray(event);
-            if (bytes != null && bytes.length > 0) {
-                manager.write(bytes, this.immediateFlush || event.isEndOfBatch());
+            writeByteArrayToManager(event);
+        }
+    }
+
+    protected void directEncodeEvent(final LogEvent event) {
+        synchronized (manager) {
+            final ByteBufferDestination destination = manager.getByteBufferDestination();
+            getLayout().encode(event, destination);
+            if (manager.isAutoBuffered() || this.immediateFlush || event.isEndOfBatch()) {
+                destination.drain(destination.getByteBuffer()); // write buffer to outputStream
+                manager.flush();
             }
         }
     }
 
-    private void directEncodeEvent(final LogEvent event) {
-        synchronized (manager) {
-            final ByteBufferDestination destination = manager.getByteBufferDestination();
-            getLayout().encode(event, destination);
-            if (this.immediateFlush || event.isEndOfBatch()) {
-                destination.drain(destination.getByteBuffer()); // write buffer to outputStream
-                manager.flush();
-            }
+    protected void writeByteArrayToManager(final LogEvent event) {
+        final byte[] bytes = getLayout().toByteArray(event);
+        if (bytes != null && bytes.length > 0) {
+            manager.write(bytes, this.immediateFlush || event.isEndOfBatch());
         }
     }
 
