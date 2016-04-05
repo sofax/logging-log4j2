@@ -59,7 +59,7 @@ public class TcpSocketManager extends AbstractSocketManager {
     private final boolean retry;
 
     private final boolean immediateFail;
-    
+
     private final int connectTimeoutMillis;
 
     /**
@@ -117,6 +117,8 @@ public class TcpSocketManager extends AbstractSocketManager {
 
     @Override
     protected void write(final byte[] bytes, final int offset, final int length, boolean immediateFlush)  {
+        // currently this method is not called with direct encoders (the Layout.encode() method),
+        // so we cannot use direct encoders with the TcpSocketManager...
         if (socket == null) {
             if (connector != null && !immediateFail) {
                 connector.latch();
@@ -166,7 +168,7 @@ public class TcpSocketManager extends AbstractSocketManager {
      * <li>Key: "protocol" Value: "tcp"</li>
      * <li>Key: "direction" Value: "out"</li>
      * </ul>
-     * 
+     *
      * @return Map of content format keys supporting TcpSocketManager
      */
     @Override
