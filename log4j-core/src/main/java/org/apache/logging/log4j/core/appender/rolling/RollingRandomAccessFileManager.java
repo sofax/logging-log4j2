@@ -45,6 +45,7 @@ public class RollingRandomAccessFileManager extends RollingFileManager implement
     private RandomAccessFile randomAccessFile;
     private final ByteBuffer buffer;
     private final ThreadLocal<Boolean> isEndOfBatch = new ThreadLocal<>();
+    private long drained;
 
     public RollingRandomAccessFileManager(final RandomAccessFile raf, final String fileName, final String pattern,
             final OutputStream os, final boolean append, final boolean immediateFlush, final int bufferSize,
@@ -100,6 +101,8 @@ public class RollingRandomAccessFileManager extends RollingFileManager implement
 
     @Override
     protected synchronized void write(final byte[] bytes, int offset, int length, final boolean immediateFlush) {
+        // NOTE: this method is not called by direct encoders (they call the Layout.encode() method)
+        size += buffer.limit(); // track file size
         int chunk = 0;
         do {
             if (length > buffer.remaining()) {
@@ -130,7 +133,7 @@ public class RollingRandomAccessFileManager extends RollingFileManager implement
         buffer.flip();
         try {
             randomAccessFile.write(buffer.array(), 0, buffer.limit());
-            size += buffer.limit(); // track file size
+            drained += buffer.limit();
         } catch (final IOException ex) {
             final String msg = "Error writing to RandomAccessFile " + getName();
             throw new AppenderLoggingException(msg, ex);
@@ -167,6 +170,11 @@ public class RollingRandomAccessFileManager extends RollingFileManager implement
     public ByteBuffer drain(final ByteBuffer buf) {
         flush();
         return buffer;
+    }
+
+    @Override
+    public long size() {
+        return drained + buffer.position();
     }
 
     /**
