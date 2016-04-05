@@ -22,6 +22,7 @@ import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.io.Serializable;
 import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
@@ -33,6 +34,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.apache.logging.log4j.core.Layout;
+import org.apache.logging.log4j.core.layout.ByteBufferDestination;
 import org.apache.logging.log4j.core.util.Closer;
 import org.apache.logging.log4j.core.util.NullOutputStream;
 
@@ -42,7 +44,7 @@ import org.apache.logging.log4j.core.util.NullOutputStream;
  * Extends OutputStreamManager but instead of using a buffered output stream, this class maps a region of a file into
  * memory and writes to this memory region.
  * <p>
- * 
+ *
  * @see <a href="http://www.codeproject.com/Tips/683614/Things-to-Know-about-Memory-Mapped-File-in-Java">
  *      http://www.codeproject.com/Tips/683614/Things-to-Know-about-Memory-Mapped-File-in-Java</a>
  * @see <a href="http://bugs.java.com/view_bug.do?bug_id=6893654">http://bugs.java.com/view_bug.do?bug_id=6893654</a>
@@ -50,11 +52,11 @@ import org.apache.logging.log4j.core.util.NullOutputStream;
  * @see <a
  *      href="http://stackoverflow.com/questions/9261316/memory-mapped-mappedbytebuffer-or-direct-bytebuffer-for-db-implementation">
  *      http://stackoverflow.com/questions/9261316/memory-mapped-mappedbytebuffer-or-direct-bytebuffer-for-db-implementation</a>
- * 
+ *
  * @since 2.1
  */
 //CHECKSTYLE:ON
-public class MemoryMappedFileManager extends OutputStreamManager {
+public class MemoryMappedFileManager extends OutputStreamManager implements ByteBufferDestination {
     /**
      * Default length of region to map.
      */
@@ -141,7 +143,7 @@ public class MemoryMappedFileManager extends OutputStreamManager {
             final float millis = (float) ((System.nanoTime() - startNanos) / NANOS_PER_MILLISEC);
             LOGGER.debug("{} {} extended {} OK in {} millis", getClass().getSimpleName(), getName(), getFileName(),
                     millis);
-            
+
             mappedBuffer = mmap(randomAccessFile.getChannel(), getFileName(), offset, length);
             mappingOffset = offset;
         } catch (final Exception ex) {
@@ -235,7 +237,7 @@ public class MemoryMappedFileManager extends OutputStreamManager {
 
     /**
      * Returns the length of the memory mapped region.
-     * 
+     *
      * @return the length of the mapped region
      */
     public int getRegionLength() {
@@ -245,7 +247,7 @@ public class MemoryMappedFileManager extends OutputStreamManager {
     /**
      * Returns {@code true} if the content of the buffer should be forced to the storage device on every write,
      * {@code false} otherwise.
-     * 
+     *
      * @return whether each write should be force-sync'ed
      */
     public boolean isImmediateFlush() {
@@ -257,7 +259,7 @@ public class MemoryMappedFileManager extends OutputStreamManager {
      * <p>
      * Key: "fileURI" Value: provided "advertiseURI" param.
      * </p>
-     * 
+     *
      * @return Map of content format keys supporting FileManager
      */
     @Override
@@ -265,6 +267,27 @@ public class MemoryMappedFileManager extends OutputStreamManager {
         final Map<String, String> result = new HashMap<>(super.getContentFormat());
         result.put("fileURI", advertiseURI);
         return result;
+    }
+
+    @Override
+    public ByteBufferDestination getByteBufferDestination() {
+        return this;
+    }
+
+    @Override
+    public synchronized ByteBuffer getByteBuffer() {
+        return mappedBuffer;
+    }
+
+    @Override
+    public synchronized ByteBuffer drain(final ByteBuffer buf) {
+        remap();
+        return mappedBuffer;
+    }
+
+    @Override
+    public synchronized long size() {
+        return this.mappingOffset + mappedBuffer.position();
     }
 
     /**
