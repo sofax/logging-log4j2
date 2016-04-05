@@ -44,6 +44,7 @@ public class RandomAccessFileManager extends OutputStreamManager implements Byte
     private final RandomAccessFile randomAccessFile;
     private final ByteBuffer buffer;
     private final ThreadLocal<Boolean> isEndOfBatch = new ThreadLocal<>();
+    private long drained;
 
     protected RandomAccessFileManager(final RandomAccessFile file,
             final String fileName, final OutputStream os,
@@ -114,6 +115,7 @@ public class RandomAccessFileManager extends OutputStreamManager implements Byte
         buffer.flip();
         try {
             randomAccessFile.write(buffer.array(), 0, buffer.limit());
+            drained += buffer.limit();
         } catch (final IOException ex) {
             final String msg = "Error writing to RandomAccessFile " + getName();
             throw new AppenderLoggingException(msg, ex);
@@ -173,6 +175,11 @@ public class RandomAccessFileManager extends OutputStreamManager implements Byte
     public ByteBuffer drain(final ByteBuffer buf) {
         flush();
         return buffer;
+    }
+
+    @Override
+    public long size() {
+        return drained + buffer.position();
     }
 
     /**
