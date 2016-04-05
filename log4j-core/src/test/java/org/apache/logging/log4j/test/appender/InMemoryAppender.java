@@ -40,15 +40,22 @@ public class InMemoryAppender extends AbstractOutputStreamAppender<InMemoryAppen
     }
 
     static class InMemoryManager extends OutputStreamManager {
+        private final ByteArrayOutputStream byteArrayOutputStream;
 
         public InMemoryManager(final String name, final Layout<? extends Serializable> layout,
                 final boolean writeHeader) {
-            super(new ByteArrayOutputStream(), name, layout, writeHeader);
+            this(new ByteArrayOutputStream(), name, layout, writeHeader);
+        }
+
+        public InMemoryManager(final ByteArrayOutputStream stream, final String name,
+                final Layout<? extends Serializable> layout, final boolean writeHeader) {
+            super(stream, name, layout, writeHeader);
+            this.byteArrayOutputStream = stream;
         }
 
         @Override
         public String toString() {
-            return getOutputStream().toString();
+            return byteArrayOutputStream.toString();
         }
     }
 }
