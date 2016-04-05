@@ -27,6 +27,7 @@ public class SpyByteBufferDestination implements ByteBufferDestination {
     public final ByteBuffer buffer;
     public final ByteBuffer drained;
     public final List<Data> drainPoints = new ArrayList<>();
+    private long drainedByteCount;
 
     public static class Data {
         public final int position;
@@ -57,7 +58,13 @@ public class SpyByteBufferDestination implements ByteBufferDestination {
         buf.flip();
         drainPoints.add(new Data(buf.position(), buf.limit()));
         drained.put(buf);
+        drainedByteCount += buf.limit();
         buf.clear();
         return buf;
+    }
+
+    @Override
+    public long size() {
+        return drainedByteCount + buffer.position();
     }
 }

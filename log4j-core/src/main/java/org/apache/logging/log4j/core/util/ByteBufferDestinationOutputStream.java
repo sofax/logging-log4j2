@@ -37,6 +37,7 @@ import org.apache.logging.log4j.core.layout.ByteBufferDestination;
 public class ByteBufferDestinationOutputStream extends FilterOutputStream implements ByteBufferDestination {
     private static final int DEFAULT_BUFFER_SIZE = 8 * 1024;
     private final ByteBuffer byteBuffer;
+    private long drained;
 
     public ByteBufferDestinationOutputStream(final OutputStream out) {
         this(out, DEFAULT_BUFFER_SIZE);
@@ -64,11 +65,17 @@ public class ByteBufferDestinationOutputStream extends FilterOutputStream implem
         buf.flip();
         try {
             out.write(buf.array(), 0, buf.limit());
+            drained += buf.limit();
         } catch (final IOException ex) {
             throw new IllegalStateException("Could not write " + buf.limit() + " bytes to " + out, ex);
         }
         buf.clear();
         return buf;
+    }
+
+    @Override
+    public long size() {
+        return drained + byteBuffer.position();
     }
 
     /**

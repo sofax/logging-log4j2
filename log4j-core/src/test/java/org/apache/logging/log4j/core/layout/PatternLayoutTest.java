@@ -86,6 +86,11 @@ public class PatternLayoutTest {
         public ByteBuffer drain(final ByteBuffer buf) {
             throw new IllegalStateException("Unexpected message larger than 2048 bytes");
         }
+
+        @Override
+        public long size() {
+            return byteBuffer.position();
+        }
     }
 
     private void assertToByteArray(final String expectedStr, final PatternLayout layout, final LogEvent event) {
@@ -239,7 +244,7 @@ public class PatternLayoutTest {
                 .setIncludeLocation(true)
                 .setMessage(new SimpleMessage("entry")).build();
         final String result1 = new FauxLogger().formatEvent(event1, layout);
-        final String expectSuffix1 = String.format("====== PatternLayoutTest.testPatternSelector:241 entry ======%n");
+        final String expectSuffix1 = String.format("====== PatternLayoutTest.testPatternSelector:246 entry ======%n");
         assertTrue("Unexpected result: " + result1, result1.endsWith(expectSuffix1));
         final LogEvent event2 = Log4jLogEvent.newBuilder() //
                 .setLoggerName(this.getClass().getName()).setLoggerFqcn("org.apache.logging.log4j.core.Logger") //

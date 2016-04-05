@@ -42,4 +42,12 @@ public interface ByteBufferDestination {
      * @return a buffer with more available space (which may or may not be the same instance)
      */
     ByteBuffer drain(ByteBuffer buf);
+
+    /**
+     * Returns the number of bytes that have been written to this destination.
+     *
+     * @return the number of bytes that have been {@link #drain(ByteBuffer) drained} plus the number of bytes that are
+     *          still in the buffer.
+     */
+    long size();
 }

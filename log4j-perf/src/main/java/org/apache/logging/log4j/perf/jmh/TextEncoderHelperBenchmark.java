@@ -80,6 +80,11 @@ public class TextEncoderHelperBenchmark {
             buf.clear();
             return buf;
         }
+
+        @Override
+        public long size() {
+            return count + buffer.position();
+        }
     }
 
     private static LogEvent createLogEvent() {

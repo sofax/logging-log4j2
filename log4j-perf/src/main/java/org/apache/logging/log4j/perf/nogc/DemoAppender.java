@@ -30,6 +30,7 @@ public class DemoAppender extends AbstractAppender implements ByteBufferDestinat
     private final ByteBuffer byteBuffer = ByteBuffer.wrap(new byte[4096]);
 
     public long checksum;
+    private long drained;
 
     public DemoAppender(Layout<?> layout) {
         super("demo", null, layout);
@@ -65,7 +66,13 @@ public class DemoAppender extends AbstractAppender implements ByteBufferDestinat
     public ByteBuffer drain(ByteBuffer buf) {
         buf.flip();
         consume(buf.array(), buf.position(), buf.limit());
+        drained += buf.limit();
         buf.clear();
         return buf;
+    }
+
+    @Override
+    public long size() {
+        return drained + byteBuffer.position();
     }
 }
