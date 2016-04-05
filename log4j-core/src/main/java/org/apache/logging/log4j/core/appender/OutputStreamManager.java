@@ -34,11 +34,13 @@ public class OutputStreamManager extends AbstractManager {
 
     private volatile OutputStream os;
     protected final Layout<?> layout;
+    private final boolean autoBuffered;
 
-    protected OutputStreamManager(final OutputStream os, final String streamName, final Layout<?> layout,
+    protected OutputStreamManager(final OutputStream out, final String streamName, final Layout<?> layout,
             final boolean writeHeader) {
         super(streamName);
-        this.os = adaptForDirectEncoding(os);
+        this.os = adaptForDirectEncoding(out);
+        this.autoBuffered = this.os != out;
         this.layout = layout;
         if (writeHeader && layout != null) {
             final byte[] header = layout.getHeader();
@@ -83,6 +85,10 @@ public class OutputStreamManager extends AbstractManager {
         }
         throw new UnsupportedOperationException(
                 "ByteBufferDestination not available unless direct encoders are enabled");
+    }
+
+    public boolean isAutoBuffered() {
+        return autoBuffered;
     }
 
     /**
