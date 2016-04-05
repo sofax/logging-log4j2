@@ -36,6 +36,7 @@ import org.apache.logging.log4j.core.layout.JsonLayout;
 import org.apache.logging.log4j.core.layout.PatternLayout;
 import org.apache.logging.log4j.core.layout.XmlLayout;
 import org.apache.logging.log4j.core.net.Protocol;
+import org.apache.logging.log4j.core.util.Constants;
 import org.apache.logging.log4j.test.AvailablePortFinder;
 import org.apache.logging.log4j.test.appender.ListAppender;
 import org.junit.After;
@@ -54,9 +55,9 @@ public abstract class AbstractSocketServerTest {
     private static final String MESSAGE = "This is test message";
 
     private static final String MESSAGE_2 = "This is test message 2";
-    
+
     private static final String MESSAGE_WITH_SPECIAL_CHARS = "{This}\n[is]\"n\"a\"\r\ntrue:\n\ttest,\nmessage";
-    
+
     static final int PORT_NUM = AvailablePortFinder.getNextAvailable();
 
     static final int PORT = PORT_NUM;
@@ -138,20 +139,25 @@ public abstract class AbstractSocketServerTest {
             try {
                 testServer(m1, m2);
             } catch (final AppenderLoggingException are) {
-                assertTrue("", are.getCause() != null && are.getCause() instanceof IOException);
+                if (Constants.ENABLE_DIRECT_ENCODERS) {
+                    IllegalStateException ex = (IllegalStateException) are.getCause();
+                    assertTrue("" + ex.getCause(), ex.getCause() != null && ex.getCause() instanceof IOException);
+                } else {
+                    assertTrue("" + are.getCause(), are.getCause() != null && are.getCause() instanceof IOException);
+                }
                 // Failure expected.
             }
         } else {
             testServer(m1, m2);
         }
     }
-    
-    
+
+
     @Test
     public void testMessagesWithSpecialChars() throws Exception {
         testServer(MESSAGE_WITH_SPECIAL_CHARS);
     }
-    
+
 
     private void testServer(final int size) throws Exception {
         final String[] messages = new String[size];
