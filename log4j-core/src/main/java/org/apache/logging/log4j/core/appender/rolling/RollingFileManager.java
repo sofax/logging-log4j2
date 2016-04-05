@@ -92,6 +92,7 @@ public class RollingFileManager extends FileManager {
 
     @Override
     protected synchronized void write(final byte[] bytes, final int offset, final int length, final boolean immediateFlush) {
+        // NOTE: this method is not called by direct encoders (they call the Layout.encode() method)
         size += length;
         super.write(bytes, offset, length, immediateFlush);
     }
@@ -101,7 +102,11 @@ public class RollingFileManager extends FileManager {
      * @return The size of the file in bytes.
      */
     public long getFileSize() {
-        return size;
+        return size + encodedSize();
+    }
+
+    private long encodedSize() {
+        return Constants.ENABLE_DIRECT_ENCODERS ? getByteBufferDestination().size() : 0L;
     }
 
     /**
