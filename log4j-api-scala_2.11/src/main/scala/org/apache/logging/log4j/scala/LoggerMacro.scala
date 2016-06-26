@@ -18,7 +18,7 @@ package org.apache.logging.log4j.scala
 
 import org.apache.logging.log4j.message.{EntryMessage, Message}
 import org.apache.logging.log4j.spi.AbstractLogger
-import org.apache.logging.log4j.{Level, Marker}
+import org.apache.logging.log4j.{Level, Marker, ThreadContext}
 
 import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
@@ -302,12 +302,18 @@ private object LoggerMacro {
       }
     )
 
-  def logCseq(c: LoggerContext)(level: c.Expr[Level], message: c.Expr[CharSequence]) =
-    c.universe.reify(
+  def logCseq(c: LoggerContext)(level: c.Expr[Level], message: c.Expr[CharSequence]) = {
+    import c.universe._
+    reify(
       if (c.prefix.splice.delegate.isEnabled(level.splice)) {
+        ThreadContext.put("file", c.Expr[String](Literal(Constant(c.enclosingPosition.source.file.name))).splice)
+        ThreadContext.put("line", c.Expr[String](Literal(Constant(String.valueOf(c.enclosingPosition.line)))).splice)
         c.prefix.splice.logMessage(level.splice, null, message.splice, null)
+        ThreadContext.remove("line")
+        ThreadContext.remove("file")
       }
     )
+  }
 
   def logObject(c: LoggerContext)(level: c.Expr[Level], message: c.Expr[AnyRef]) =
     c.universe.reify(
