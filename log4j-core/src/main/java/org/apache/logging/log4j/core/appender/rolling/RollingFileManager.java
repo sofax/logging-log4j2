@@ -176,10 +176,9 @@ public class RollingFileManager extends FileManager {
 
     @Override
     public void releaseSub(final long timeout, final TimeUnit timeUnit) {
-        triggeringPolicy.stop(timeout, timeUnit);
         super.releaseSub(timeout, timeUnit);
     }
-    
+
     public synchronized void rollover() {
         if (rollover(rolloverStrategy)) {
             try {
@@ -373,7 +372,7 @@ public class RollingFileManager extends FileManager {
          */
         public FactoryData(final String pattern, final boolean append, final boolean bufferedIO,
                 final TriggeringPolicy policy, final RolloverStrategy strategy, final String advertiseURI,
-                final Layout<? extends Serializable> layout, final int bufferSize, final boolean immediateFlush, 
+                final Layout<? extends Serializable> layout, final int bufferSize, final boolean immediateFlush,
                 final boolean createOnDemand, final Configuration configuration) {
             super(configuration);
             this.pattern = pattern;
@@ -465,7 +464,7 @@ public class RollingFileManager extends FileManager {
                 final ByteBuffer buffer = ByteBuffer.wrap(new byte[actualSize]);
                 final OutputStream os = data.createOnDemand ? null : new FileOutputStream(name, data.append);
                 final long time = data.createOnDemand? System.currentTimeMillis() : file.lastModified(); // LOG4J2-531 create file first so time has valid value
-                
+
                 return new RollingFileManager(data.getLoggerContext(), name, data.pattern, os,
                         data.append, data.createOnDemand, size, time, data.policy, data.strategy, data.advertiseURI,
                         data.layout, writeHeader, buffer);

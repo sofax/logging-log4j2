@@ -17,6 +17,8 @@
 package org.apache.logging.log4j.core.config;
 
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -27,14 +29,14 @@ import org.apache.logging.log4j.core.AbstractLifeCycle;
 import org.apache.logging.log4j.core.util.CronExpression;
 import org.apache.logging.log4j.core.util.Log4jThreadFactory;
 
-/**
- *
- */
+@SuppressWarnings( "javadoc" )
 public class ConfigurationScheduler extends AbstractLifeCycle {
 
     private static final String SIMPLE_NAME = "Log4j2 " + ConfigurationScheduler.class.getSimpleName();
     private static final int MAX_SCHEDULED_ITEMS = 5;
     private ScheduledExecutorService executorService;
+
+    private Set< ShutdownListener > shutdownListeners = new HashSet<>();
 
     private int scheduledItems = 0;
 
@@ -46,6 +48,8 @@ public class ConfigurationScheduler extends AbstractLifeCycle {
             scheduledItems = Math.min(scheduledItems, MAX_SCHEDULED_ITEMS);
             executorService = new ScheduledThreadPoolExecutor(scheduledItems,
                     Log4jThreadFactory.createDaemonThreadFactory("Scheduled"));
+
+            ((ScheduledThreadPoolExecutor) executorService).setRemoveOnCancelPolicy( true );
         } else {
             LOGGER.debug("{}: No scheduled items", SIMPLE_NAME);
         }
@@ -54,10 +58,27 @@ public class ConfigurationScheduler extends AbstractLifeCycle {
     @Override
     public boolean stop(final long timeout, final TimeUnit timeUnit) {
         setStopping();
-        if (executorService != null) {
-            LOGGER.debug("{} shutting down threads in {}", SIMPLE_NAME, executorService);
-            executorService.shutdown();
+
+        ShutdownListener[] listeners;
+
+        synchronized (shutdownListeners) {
+           listeners = new ShutdownListener[ shutdownListeners.size() ];
+
+           int i=0;
+           for (final ShutdownListener listener : shutdownListeners) {
+              listeners[i++] = listener;
+           }
         }
+
+        for (final ShutdownListener listener : listeners) {
+           listener.shuttingDown();
+        }
+
+        if (executorService != null) {
+           LOGGER.debug("{} shutting down threads in {}", SIMPLE_NAME, executorService);
+           executorService.shutdown();
+        }
+
         setStopped();
         return true;
     }
@@ -80,6 +101,18 @@ public class ConfigurationScheduler extends AbstractLifeCycle {
         if (!isStarted() && scheduledItems > 0) {
             --scheduledItems;
         }
+    }
+
+    /**
+     * Adds a {@link ShutdownListener} to the scheduler. The listener's {@link ShutdownListener#shuttingDown()}
+     * method will be called when the scheduler is stopped (see also: {@link #stop(long, TimeUnit)}).
+     *
+     * @param listener the listener to add.
+     */
+    public void registerShutdownListener (final ShutdownListener listener) {
+       synchronized (shutdownListeners) {
+          shutdownListeners.add( listener );
+       }
     }
 
     /**
@@ -120,6 +153,7 @@ public class ConfigurationScheduler extends AbstractLifeCycle {
         final ScheduledFuture<?> future = schedule(runnable, nextFireInterval(fireDate), TimeUnit.MILLISECONDS);
         final CronScheduledFuture<?> cronScheduledFuture = new CronScheduledFuture<>(future, fireDate);
         runnable.setScheduledFuture(cronScheduledFuture);
+
         return cronScheduledFuture;
     }
 
@@ -179,11 +213,12 @@ public class ConfigurationScheduler extends AbstractLifeCycle {
             } catch(final Throwable ex) {
                 LOGGER.error("{} caught error running command", SIMPLE_NAME, ex);
             } finally {
-                final Date fireDate = cronExpression.getNextValidTimeAfter(new Date());
-                final ScheduledFuture<?> future = schedule(this, nextFireInterval(fireDate), TimeUnit.MILLISECONDS);
-                scheduledFuture.reset(future, fireDate);
+               if( !this.scheduledFuture.isCancelled() ) {
+                   Date fireDate = cronExpression.getNextValidTimeAfter(new Date());
+                   final ScheduledFuture<?> future = schedule(this, nextFireInterval(fireDate), TimeUnit.MILLISECONDS);
+                   scheduledFuture.reset(future, fireDate);
+               }
             }
         }
     }
-
 }

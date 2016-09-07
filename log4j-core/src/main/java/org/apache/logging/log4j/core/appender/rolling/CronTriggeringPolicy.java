@@ -17,27 +17,31 @@
 package org.apache.logging.log4j.core.appender.rolling;
 
 import java.text.ParseException;
+
 import java.util.Calendar;
 import java.util.Date;
-import java.util.concurrent.TimeUnit;
-import org.apache.logging.log4j.core.AbstractLifeCycle;
+
+import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.CronScheduledFuture;
 import org.apache.logging.log4j.core.config.Scheduled;
+import org.apache.logging.log4j.core.config.ShutdownListener;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
 import org.apache.logging.log4j.core.config.plugins.PluginConfiguration;
 import org.apache.logging.log4j.core.config.plugins.PluginFactory;
 import org.apache.logging.log4j.core.util.CronExpression;
+import org.apache.logging.log4j.status.StatusLogger;
+
 
 /**
  * Rolls a file over based on a cron schedule.
  */
 @Plugin(name = "CronTriggeringPolicy", category = "Core", printObject = true)
 @Scheduled
-public final class CronTriggeringPolicy extends AbstractLifeCycle implements TriggeringPolicy {
-
+public final class CronTriggeringPolicy implements TriggeringPolicy {
+    private static final Logger LOGGER = StatusLogger.getLogger();
     private static final String defaultSchedule = "0 0 0 * * ?";
     private RollingFileManager manager;
     private final CronExpression cronExpression;
@@ -55,7 +59,7 @@ public final class CronTriggeringPolicy extends AbstractLifeCycle implements Tri
 
     /**
      * Initializes the policy.
-     * 
+     *
      * @param aManager
      *            The RollingFileManager.
      */
@@ -69,12 +73,22 @@ public final class CronTriggeringPolicy extends AbstractLifeCycle implements Tri
                 rollover();
             }
         }
+
         future = configuration.getScheduler().scheduleWithCron(cronExpression, new CronTrigger());
+
+        configuration.getScheduler().registerShutdownListener( new ShutdownListener() {
+           @Override
+           public void shuttingDown()
+           {
+              future.cancel( false );
+           }
+        } );
+
     }
 
     /**
      * Determines whether a rollover should occur.
-     * 
+     *
      * @param event
      *            A reference to the currently event.
      * @return true if a rollover should occur.
@@ -90,7 +104,7 @@ public final class CronTriggeringPolicy extends AbstractLifeCycle implements Tri
 
     /**
      * Creates a ScheduledTriggeringPolicy.
-     * 
+     *
      * @param configuration
      *            the Configuration.
      * @param evaluateOnStartup
@@ -135,20 +149,6 @@ public final class CronTriggeringPolicy extends AbstractLifeCycle implements Tri
         cal.setTime(fireDate);
         cal.add(Calendar.SECOND, -1);
         nextRollDate = cal.getTime();
-    }
-
-    @Override
-    public boolean stop(final long timeout, final TimeUnit timeUnit) {
-        setStopping();
-        boolean canceled = true;
-        if (future != null) {
-            if (future.isCancelled() || future.isDone()) {
-                return true;
-            }
-            canceled = future.cancel(true);
-        }
-        setStopped();
-        return canceled;
     }
 
     @Override
