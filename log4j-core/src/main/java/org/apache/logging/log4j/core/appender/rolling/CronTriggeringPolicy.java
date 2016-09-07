@@ -25,6 +25,7 @@ import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.CronScheduledFuture;
 import org.apache.logging.log4j.core.config.Scheduled;
+import org.apache.logging.log4j.core.config.ShutdownListener;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
 import org.apache.logging.log4j.core.config.plugins.PluginConfiguration;
@@ -38,7 +39,6 @@ import org.apache.logging.log4j.status.StatusLogger;
 @Plugin(name = "CronTriggeringPolicy", category = "Core", printObject = true)
 @Scheduled
 public final class CronTriggeringPolicy implements TriggeringPolicy {
-
     private static final Logger LOGGER = StatusLogger.getLogger();
     private static final String defaultSchedule = "0 0 0 * * ?";
     private RollingFileManager manager;
@@ -46,7 +46,7 @@ public final class CronTriggeringPolicy implements TriggeringPolicy {
     private final Configuration configuration;
     private final boolean checkOnStartup;
     private volatile Date nextRollDate;
-    private CronScheduledFuture future;
+    private CronScheduledFuture< ? > future;
 
     private CronTriggeringPolicy(final CronExpression schedule, final boolean checkOnStartup,
             final Configuration configuration) {
@@ -69,7 +69,17 @@ public final class CronTriggeringPolicy implements TriggeringPolicy {
                 rollover();
             }
         }
+
         future = configuration.getScheduler().scheduleWithCron(cronExpression, new CronTrigger());
+
+        configuration.getScheduler().registerShutdownListener( new ShutdownListener() {
+           @Override
+           public void shuttingDown()
+           {
+              future.cancel( false );
+           }
+        } );
+
     }
 
     /**
